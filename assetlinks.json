@@ -1,8 +1,0 @@
-[{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
-        "namespace": "android_app",
-        "package_name": "de.bappo.game",
-        "sha256_cert_fingerprints": ["53:10:9B:ED:AE:D0:3E:50:67:A8:BA:B3:4F:B4:56:33:27:55:3F:04:CA:55:86:2D:2C:D2:1A:A3:D8:CF:B6:4F"]
-      }
-    }]
