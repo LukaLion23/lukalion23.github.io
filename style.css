@@ -2629,3 +2629,18 @@ body button.leave-game-button, body button#leaveRoomButton {
     line-height: 20px !important; box-shadow: none !important;
     z-index: 100000 !important;
 }
+
+/* Persönlicher Spielername DanPan. */
+.danpan-player-name {
+    color: #ff78bd !important;
+    -webkit-text-fill-color: #ff78bd !important;
+    font-weight: 900;
+    white-space: nowrap;
+}
+.danpan-heart {
+    display: inline-block;
+    margin-left: .3em;
+    color: #ff4f9b !important;
+    -webkit-text-fill-color: #ff4f9b !important;
+    font-size: .95em;
+}
