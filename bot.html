@@ -1,14 +1,15 @@
 <!DOCTYPE html>
-<html lang="de">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<meta name="theme-color" content="#082b26">
-<meta name="darkreader-lock">
-<title>Bappo – Gegen den Computer</title>
-<style>html,body{margin:0;background:#082b26;color:#fff;font-family:system-ui}</style>
-</head>
-<body>
-<script type="module" src="./bot.js?v=87"></script>
-</body>
-</html>
+<html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><meta name="darkreader-lock"><meta name="theme-color" content="#082b26"><title>Bappo – Gegen Computer spielen</title>
+<link rel="stylesheet" href="./style.css?v=86"><link rel="stylesheet" href="./game-theme.css?v=80"><link rel="stylesheet" href="./table-layout.css?v=80">
+<style>
+body.bot-select-page{height:100dvh;min-height:0;overflow:auto;display:flex;flex-direction:column}
+body.bot-select-page main{flex:1;display:flex;align-items:center;justify-content:center;width:100%}
+.bot-choice{max-width:460px;width:100%;text-align:center;padding:22px}
+.bot-choice h2{margin-top:0}.bot-choice p{font-size:14px;color:#d9e4d8}
+.bot-choice label{display:block;margin:15px 0 8px;text-align:center}
+.bot-choice select{width:100%;max-width:250px;min-height:48px;border-radius:10px;font-size:18px;text-align:center;padding:8px;color:#173328;background:#fff}
+.bot-choice button{display:block;margin:18px auto 0;min-width:180px}
+</style></head>
+<body class="bot-select-page"><header class="game-brand"><span class="brand-mark" aria-hidden="true">✦</span><div><h1>BAPPO</h1><span class="brand-caption">DEIN TISCH. DEIN SPIEL.</span></div></header>
+<main class="container"><section class="panel bot-choice"><h2>Gegen den Computer spielen</h2><p id="botPlayerName"></p><label for="botCount">Anzahl Computergegner</label><select id="botCount"></select><p id="botLimitInfo"></p><button id="botStart" type="button">Spiel starten</button><p><a href="./index.html">Zurück zur Startseite</a></p></section></main>
+<script type="module" src="./bot.js?v=88"></script></body></html>
