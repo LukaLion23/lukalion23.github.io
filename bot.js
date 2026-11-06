@@ -5,11 +5,41 @@ const page=location.pathname.split("/").pop();
 const url=target=>"./"+target+".html?solo=1";
 let data;
 let busy=false;
+const LIMIT_MS=30*60*1000, TIME_KEY="bappoSoloDailyTimeV1";
+let lastTick=Date.now(), expired=false;
+function localDay(){const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-");}
+function timeRecord(){
+    try{const record=JSON.parse(localStorage.getItem(TIME_KEY));return record?.day===localDay()?record:{day:localDay(),elapsed:0};}
+    catch{return {day:localDay(),elapsed:0};}
+}
+function showLimit(){
+    if(expired)return;
+    expired=true;busy=true;
+    const overlay=document.createElement("div");
+    overlay.style.cssText="position:fixed;inset:0;z-index:100000;background:#082b26;color:#f5f3e9;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:25px;text-align:center;font-family:inherit";
+    overlay.innerHTML='<h2 style="font-size:clamp(23px,6vw,38px);line-height:1.3">Deine Zeit ist aufgebraucht, mach was Sinnvolles.</h2><a href="./index.html" style="padding:12px 20px;border-radius:10px;background:#d7ae59;color:#14251b;font-weight:800;text-decoration:none">Zurück zur Startseite</a>';
+    document.body.append(overlay);
+}
+function updateTime(){
+    const now=Date.now(),record=timeRecord();
+    const elapsed=Math.max(0,Math.min(now-lastTick,5000));
+    lastTick=now;
+    if(!document.hidden&&!expired&&record.elapsed<LIMIT_MS){
+        record.elapsed=Math.min(LIMIT_MS,record.elapsed+elapsed);
+        localStorage.setItem(TIME_KEY,JSON.stringify(record));
+    }
+    if(record.elapsed>=LIMIT_MS)showLimit();
+    return !expired;
+}
+window.addEventListener("visibilitychange",()=>{lastTick=Date.now();updateTime();});
+window.addEventListener("storage",event=>{if(event.key===TIME_KEY)updateTime();});
+updateTime();
+setInterval(updateTime,1000);
 function save(){sessionStorage.setItem(KEY,JSON.stringify(data));}
 function load(){try{return JSON.parse(sessionStorage.getItem(KEY));}catch{return null;}}
 function name(){return (localStorage.getItem("kartenspielPlayerName")||sessionStorage.getItem("kartenspielPlayerName")||"Du").trim().slice(0,30);}
 function newGame(){data={round:0,finished:false,scores:{[HUMAN]:{name:name(),score:0,roundPoints:0},[BOT]:{name:"Computer",score:0,roundPoints:0}}};save();}
-function navigate(target){location.replace(url(target));}
+function navigate(target){if(updateTime())location.replace(url(target));}
 function card(card,button=false,disabled=false){
     const tag=button?"button":"div";
     return '<'+tag+' class="card '+(button?'':'display-card ')+getCardColorClass(card.color)+'" '+(button?'type="button" data-card-id="'+escapeHtml(card.id)+'" '+(disabled?'disabled':''):'role="img"')+' aria-label="'+escapeHtml(card.color)+' '+card.value+'"><img class="card-color-image" src="'+getCardImagePath(card.color)+'" alt="" aria-hidden="true" draggable="false"><strong>'+card.value+'</strong></'+tag+'>';
@@ -18,15 +48,23 @@ function score(player){return data.scores[player];}
 function playerName(player){return renderPlayerNameHtml(score(player).name);}
 function order(){return data.starter===HUMAN?[HUMAN,BOT]:[BOT,HUMAN];}
 function startRound(){
+    if(!updateTime())return;
     const deck=createDeck();shuffle(deck);
-    const round=data.round+1,count=round===1?2+Math.floor(Math.random()*9):1+Math.floor(Math.random()*10);
+    const round=data.round+1,count=Math.floor(Math.random()*21);
     data.round=round;data.count=count;data.starter=round%2===1?HUMAN:BOT;
     data.currentTip=data.starter;data.currentPlayer=data.starter;
     data.hands={[HUMAN]:[],[BOT]:[]};data.trick=[];data.trickNumber=1;
     data.wins={[HUMAN]:0,[BOT]:0};data.tips={[HUMAN]:null,[BOT]:null};
     for(let i=0;i<count;i++)for(const p of [HUMAN,BOT])data.hands[p].push(deck.pop());
     data.singleCards=count===1?{[HUMAN]:data.hands[HUMAN][0],[BOT]:data.hands[BOT][0]}:null;
-    data.status="tips";data.finished=false;
+    data.status=count===0?"roundResult":"tips";data.finished=false;
+    if(count===0){
+        for(const p of [HUMAN,BOT]){
+            score(p).roundPoints=calculateRoundPoints(0,0);
+            score(p).score+=score(p).roundPoints;
+        }
+        save();navigate("round");return;
+    }
     save();navigate("tip");
 }
 function botTip(){
@@ -176,13 +214,13 @@ function renderRound(){
         return;
     }
     $("roundTitle").textContent="Runde "+(data.round+1)+" vorbereiten";
-    $("cardsPerPlayer").value="Zufällig";$("cardsPerPlayer").type="text";$("cardsPerPlayer").disabled=true;
-    $("cardLimitInfo").textContent="Die Kartenanzahl wird automatisch zufällig bestimmt.";
+    $("cardsPerPlayer").hidden=true;
+    $("cardLimitInfo").hidden=true;
     $("lastRoundScores").innerHTML='<table><tr><th>Spieler</th><th>Letzte Runde</th><th>Gesamt</th></tr>'+[HUMAN,BOT].map(p=>'<tr><td>'+playerName(p)+'</td><td>'+score(p).roundPoints+'</td><td>'+score(p).score+'</td></tr>').join("")+"</table>";
 }
 data=load();
-if(page==="bot.html"){newGame();startRound();}
-else if(!data||!data.scores||(!data.hands&&page!=="round.html")){newGame();startRound();}
+if(page==="bot.html"){newGame();navigate("round");}
+else if(!data||!data.scores||(!data.hands&&page!=="round.html")){newGame();navigate("round");}
 else if(page==="tip.html"){
     if(data.status!=="tips"){navigate(data.status==="roundResult"?"round":"game");}
     else {if(data.starter===BOT&&data.tips[BOT]===null)botTip();renderTips();$("submitTipButton").onclick=submitTip;}
