@@ -19,7 +19,7 @@ function playerName(player){return renderPlayerNameHtml(score(player).name);}
 function order(){return data.starter===HUMAN?[HUMAN,BOT]:[BOT,HUMAN];}
 function startRound(){
     const deck=createDeck();shuffle(deck);
-    const count=1+Math.floor(Math.random()*10),round=data.round+1;
+    const round=data.round+1,count=round===1?2+Math.floor(Math.random()*9):1+Math.floor(Math.random()*10);
     data.round=round;data.count=count;data.starter=round%2===1?HUMAN:BOT;
     data.currentTip=data.starter;data.currentPlayer=data.starter;
     data.hands={[HUMAN]:[],[BOT]:[]};data.trick=[];data.trickNumber=1;
@@ -38,6 +38,7 @@ function botTip(){
 }
 function submitTip(){
     if(data.status!=="tips"||data.currentTip!==HUMAN||busy)return;
+    if(!data.hands[HUMAN]?.length){alert("Die Karten wurden noch nicht geladen.");return;}
     const input=$("tipInput"),tip=Number(input.value);
     if(!Number.isInteger(tip)||tip<0||tip>data.count){alert("Bitte gib eine ganze Zahl von 0 bis "+data.count+" ein.");return;}
     if(data.starter===BOT&&tip+data.tips[BOT]===data.count){alert("Die Summe der Tipps darf nicht der Kartenanzahl entsprechen.");return;}
