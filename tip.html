@@ -41,9 +41,19 @@
         href="./style.css?v=80">
     <link rel="stylesheet" href="./game-theme.css?v=80">
     <link rel="stylesheet" href="./table-layout.css?v=80">
+    <style>
+        /* Nur im Solomodus: Die Karten bleiben vor der Tippabgabe sichtbar. */
+        body.solo-mode.tip-page { overflow-y:auto !important; height:auto !important; min-height:100dvh !important; }
+        body.solo-mode.tip-page .container { min-height:calc(100dvh - 56px); grid-template-rows:auto auto auto auto !important; overflow:visible !important; }
+        body.solo-mode.tip-page .hand-panel { grid-column:1/-1 !important; grid-row:2 !important; align-self:stretch !important; min-height:110px; }
+        body.solo-mode.tip-page #tipPanel { grid-column:1/-1 !important; grid-row:3 !important; align-self:center; }
+        body.solo-mode.tip-page .container > .panel:last-child { grid-column:1/-1 !important; grid-row:4 !important; }
+        body.solo-mode.tip-page #handArea { min-height:95px; }
+    </style>
 </head>
 
 <body class="tip-page">
+    <script>if(new URLSearchParams(location.search).has("solo"))document.body.classList.add("solo-mode");</script>
 
     <header class="game-brand"><span class="brand-mark" aria-hidden="true">✦</span><div><h1>BAPPO</h1><span class="brand-caption">DEIN TISCH. DEIN SPIEL.</span></div></header>
 
