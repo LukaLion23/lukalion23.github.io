@@ -2,7 +2,7 @@ import {createDeck,shuffle,cardsToObject,objectToCards,canPlayCard,determineTric
 
 const KEY="bappoSoloV3", TIME_KEY="bappoSoloDailyTimeV1", LIMIT=1800000, HUMAN="human";
 const $=id=>document.getElementById(id), page=location.pathname.split("/").pop();
-const url=p=>"./"+p+".html?solo=1&v=88";
+const url=p=>"./"+p+".html?solo=1&v=89";
 let data, busy=false, expired=false, lastTick=Date.now(), actionTimer=null;
 function name(){return (getSavedPlayerName()||"Du").slice(0,30);}
 function maxBots(){return name()==="LukasLion"?10:4;}
@@ -71,8 +71,22 @@ function startRound(){
 }
 function forbiddenTip(){if(data.currentTip!==data.order[data.order.length-1])return null;return data.count-data.order.slice(0,-1).reduce((sum,p)=>sum+(data.tips[p]||0),0);}
 function estimate(p){
-    const cards=data.hands[p],strong=cards.filter(c=>c.color==="Rot"?c.value>=10:c.value>=17).length;
-    return Math.max(0,Math.min(data.count,Math.round(strong*.75+(data.count-strong)*.18+(Math.random()-.5)*1.4)));
+    const hand=data.hands[p], opponents=players().length-1;
+    let expected=0;
+    for(const c of hand){
+        if(c.color==="Rot"){
+            const higher=20-c.value;
+            expected+=Math.pow(1-higher/79,opponents*Math.max(1,data.count*.65));
+        }else{
+            const higher=20-c.value;
+            const opponentsCards=opponents*Math.max(1,data.count*.8);
+            const noTrump=Math.pow(60/79,opponentsCards*.6);
+            expected+=Math.pow(1-higher/79,opponentsCards)*noTrump*.9;
+        }
+    }
+    let tip=Math.max(0,Math.min(data.count,Math.round(expected)));
+    if(hand.some(c=>c.color==="Rot"&&c.value===20))tip=Math.max(1,tip);
+    return tip;
 }
 function advanceTips(){
     if(data.status!=="tips")return;
@@ -120,12 +134,34 @@ function strength(c,lead){return (c.color==="Rot"?2000:c.color===lead?1000:0)+c.
 function chooseBotCard(p){
     const hand=data.hands[p],lead=data.trick[0]?.card.color;
     const valid=hand.filter(c=>canPlayCard(hand,c,lead));
-    const sorted=[...valid].sort((a,b)=>strength(a,lead)-strength(b,lead));
     const wantsWin=data.wins[p]<data.tips[p];
-    if(!lead)return wantsWin?sorted[sorted.length-1]:sorted[0];
-    const current=determineTrickWinner(data.trick,lead),target=data.trick.find(e=>e.playerId===current).card;
-    const winners=sorted.filter(c=>strength(c,lead)>strength(target,lead));
-    return wantsWin&&winners.length?winners[0]:sorted[0];
+    const needed=Math.max(0,data.tips[p]-data.wins[p]);
+    const remaining=hand.length;
+    const priority=c=>c.color==="Rot"?100+c.value:c.value;
+    const weak=[...valid].sort((a,b)=>priority(a)-priority(b));
+    if(!lead){
+        const nonTrump=valid.filter(c=>c.color!=="Rot");
+        if(!wantsWin)return (nonTrump.length?nonTrump:valid).reduce((a,b)=>a.value<b.value?a:b);
+        const highNonTrump=nonTrump.filter(c=>c.value>=14).sort((a,b)=>b.value-a.value);
+        if(highNonTrump.length&&(remaining>needed||!valid.some(c=>c.color==="Rot"&&c.value>=16)))
+            return highNonTrump[0];
+        const trumps=valid.filter(c=>c.color==="Rot").sort((a,b)=>b.value-a.value);
+        if(trumps.length&&(remaining<=needed||!highNonTrump.length))return trumps[0];
+        return [...nonTrump].sort((a,b)=>b.value-a.value)[0]||weak[0];
+    }
+    const current=determineTrickWinner(data.trick,lead);
+    const target=data.trick.find(e=>e.playerId===current).card;
+    const winners=valid.filter(c=>strength(c,lead)>strength(target,lead))
+        .sort((a,b)=>priority(a)-priority(b));
+    if(wantsWin&&winners.length){
+        const nonTrump=winners.filter(c=>c.color!=="Rot");
+        if(nonTrump.length)return nonTrump[0];
+        if(remaining<=needed||data.trick.length===players().length-1||target.color==="Rot")return winners[0];
+        if(winners[0].value>=16)return winners[0];
+    }
+    const losing=valid.filter(c=>strength(c,lead)<=strength(target,lead));
+    if(losing.length)return [...losing].sort((a,b)=>priority(a)-priority(b))[0];
+    return wantsWin?winners[0]:weak[0];
 }
 function renderOverview(){
     $("playerOverview").innerHTML='<div class="player-overview-grid">'+players().map(p=>'<article class="player-stat '+(data.currentPlayer===p&&data.status==="playing"?"is-current":"")+'"><h3>'+playerName(p)+'</h3><div><span>Tipp</span><strong>'+data.tips[p]+'</strong></div><div><span>Stiche</span><strong>'+data.wins[p]+'</strong></div></article>').join("")+"</div>";
@@ -221,7 +257,10 @@ function renderRound(){
     $("lastRoundScores").innerHTML='<table><tr><th>Spieler</th><th>Letzte Runde</th><th>Gesamt</th></tr>'+players().map(p=>'<tr><td>'+playerName(p)+'</td><td>'+score(p).roundPoints+'</td><td>'+score(p).score+'</td></tr>').join("")+"</table>";
 }
 data=load();
-if(page==="bot.html")selectBots();
+if(page==="bot.html"){
+    sessionStorage.removeItem(KEY);
+    selectBots();
+}
 else if(!data||!Array.isArray(data.players)||data.players.length<2||bots().length>maxBots())go("bot");
 else{
     if(data.scores[HUMAN]){data.scores[HUMAN].name=name();save();}
