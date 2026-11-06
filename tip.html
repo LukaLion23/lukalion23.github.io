@@ -119,7 +119,7 @@
     </main>
 
     <script type="module">
-        import("./tip.js?v=80")
+        import(new URLSearchParams(location.search).has("solo") ? "./bot.js?v=81" : "./tip.js?v=80")
             .catch(error => {
                 console.error(error);
 
