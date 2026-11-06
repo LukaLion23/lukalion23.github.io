@@ -71,22 +71,17 @@ function startRound(){
 }
 function forbiddenTip(){if(data.currentTip!==data.order[data.order.length-1])return null;return data.count-data.order.slice(0,-1).reduce((sum,p)=>sum+(data.tips[p]||0),0);}
 function estimate(p){
-    const hand=data.hands[p], opponents=players().length-1;
-    let expected=0;
-    for(const c of hand){
-        if(c.color==="Rot"){
-            const higher=20-c.value;
-            expected+=Math.pow(1-higher/79,opponents*Math.max(1,data.count*.65));
-        }else{
-            const higher=20-c.value;
-            const opponentsCards=opponents*Math.max(1,data.count*.8);
-            const noTrump=Math.pow(60/79,opponentsCards*.6);
-            expected+=Math.pow(1-higher/79,opponentsCards)*noTrump*.9;
-        }
-    }
-    let tip=Math.max(0,Math.min(data.count,Math.round(expected)));
+    const hand=data.hands[p],playerCount=players().length;
+    const weight=c=>{
+        const high=Math.pow(c.value/20,3);
+        return c.color==="Rot"?1.1+2.5*high:0.45+1.65*high;
+    };
+    const average=(20*(1.1+3*0.45)+(2.5+3*1.65)*Array.from({length:20},(_,i)=>Math.pow((i+1)/20,3)).reduce((a,b)=>a+b,0))/80;
+    const expected=hand.reduce((sum,c)=>sum+weight(c),0)/(playerCount*average);
+    let tip=Math.floor(expected);
+    if(Math.random()<expected-tip)tip++;
     if(hand.some(c=>c.color==="Rot"&&c.value===20))tip=Math.max(1,tip);
-    return tip;
+    return Math.max(0,Math.min(hand.length,tip));
 }
 function advanceTips(){
     if(data.status!=="tips")return;
