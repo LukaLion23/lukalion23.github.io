@@ -146,7 +146,7 @@ function chooseBotCard(p){
         if(highNonTrump.length&&(remaining>needed||!valid.some(c=>c.color==="Rot"&&c.value>=16)))
             return highNonTrump[0];
         const trumps=valid.filter(c=>c.color==="Rot").sort((a,b)=>b.value-a.value);
-        if(trumps.length&&(remaining<=needed||!highNonTrump.length))return trumps[0];
+        if(trumps.length&&(remaining<=needed||!nonTrump.length))return trumps[0];
         return [...nonTrump].sort((a,b)=>b.value-a.value)[0]||weak[0];
     }
     const current=determineTrickWinner(data.trick,lead);
