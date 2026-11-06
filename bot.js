@@ -1,4 +1,4 @@
-import {createDeck,shuffle,objectToCards,cardsToObject,canPlayCard,determineTrickWinner,calculateRoundPoints,getCardColorClass,getCardImagePath,escapeHtml,renderPlayerNameHtml,renderBlindHand} from "./firebase-common.js?v=85";
+import {createDeck,shuffle,objectToCards,cardsToObject,canPlayCard,determineTrickWinner,calculateRoundPoints,getCardColorClass,getCardImagePath,escapeHtml,renderPlayerNameHtml,renderBlindHand,getSavedPlayerName} from "./firebase-common.js?v=85";
 
 const KEY="bappoSoloV2", HUMAN="human", BOT="computer", $=id=>document.getElementById(id);
 const page=location.pathname.split("/").pop();
@@ -37,7 +37,7 @@ updateTime();
 setInterval(updateTime,1000);
 function save(){sessionStorage.setItem(KEY,JSON.stringify(data));}
 function load(){try{return JSON.parse(sessionStorage.getItem(KEY));}catch{return null;}}
-function name(){return (localStorage.getItem("kartenspielPlayerName")||sessionStorage.getItem("kartenspielPlayerName")||"Du").trim().slice(0,30);}
+function name(){return (getSavedPlayerName()||"Du").slice(0,30);}
 function newGame(){data={round:0,finished:false,scores:{[HUMAN]:{name:name(),score:0,roundPoints:0},[BOT]:{name:"Computer",score:0,roundPoints:0}}};save();}
 function navigate(target){if(updateTime())location.replace(url(target));}
 function card(card,button=false,disabled=false){
@@ -219,6 +219,7 @@ function renderRound(){
     $("lastRoundScores").innerHTML='<table><tr><th>Spieler</th><th>Letzte Runde</th><th>Gesamt</th></tr>'+[HUMAN,BOT].map(p=>'<tr><td>'+playerName(p)+'</td><td>'+score(p).roundPoints+'</td><td>'+score(p).score+'</td></tr>').join("")+"</table>";
 }
 data=load();
+if(data?.scores?.[HUMAN]){data.scores[HUMAN].name=name();save();}
 if(page==="bot.html"){newGame();navigate("round");}
 else if(!data||!data.scores||(!data.hands&&page!=="round.html")){newGame();navigate("round");}
 else if(page==="tip.html"){
