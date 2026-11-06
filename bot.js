@@ -1,4 +1,4 @@
-import {createDeck,shuffle,objectToCards,cardsToObject,canPlayCard,determineTrickWinner,calculateRoundPoints,getCardColorClass,getCardImagePath,escapeHtml,renderPlayerNameHtml,renderBlindHand} from "./firebase-common.js?v=80";
+import {createDeck,shuffle,objectToCards,cardsToObject,canPlayCard,determineTrickWinner,calculateRoundPoints,getCardColorClass,getCardImagePath,escapeHtml,renderPlayerNameHtml,renderBlindHand} from "./firebase-common.js?v=85";
 
 const KEY="bappoSoloV2", HUMAN="human", BOT="computer", $=id=>document.getElementById(id);
 const page=location.pathname.split("/").pop();
