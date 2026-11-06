@@ -71,22 +71,20 @@ function startRound(){
 }
 function forbiddenTip(){if(data.currentTip!==data.order[data.order.length-1])return null;return data.count-data.order.slice(0,-1).reduce((sum,p)=>sum+(data.tips[p]||0),0);}
 function estimate(p){
-    const hand=data.hands[p],playerCount=players().length;
+    const playersNow=players(),count=data.count;
     const weight=c=>{
         const high=Math.pow(c.value/20,3);
         return c.color==="Rot"?1.1+2.5*high:0.45+1.65*high;
     };
-    const average=(20*(1.1+3*0.45)+(2.5+3*1.65)*Array.from({length:20},(_,i)=>Math.pow((i+1)/20,3)).reduce((a,b)=>a+b,0))/80;
-    const strength=hand.reduce((sum,c)=>sum+weight(c),0);
-    const highCards=hand.filter(c=>c.value>=17).length;
-    const strongTrumps=hand.filter(c=>c.color==="Rot"&&c.value>=15).length;
-    const expected=(strength/(playerCount*average)*1.35+0.2*highCards+0.15*strongTrumps)*Math.max(0.72,1-0.07*Math.max(0,playerCount-4));
-    const variation=(Math.random()-.5)*0.8;
-    const adjusted=Math.max(0,expected*(2/3)*(0.9+Math.random()*0.2)+variation);
-    let tip=Math.floor(adjusted);
-    if(Math.random()<adjusted-tip)tip++;
-    if(hand.some(c=>c.color==="Rot"&&c.value===20))tip=Math.max(1,tip);
-    return Math.max(0,Math.min(hand.length,tip));
+    const meanWeight=(20*(1.1+3*0.45)+(2.5+3*1.65)*Array.from({length:20},(_,i)=>Math.pow((i+1)/20,3)).reduce((a,b)=>a+b,0))/80;
+    const strengths=Object.fromEntries(bots().map(id=>[id,data.hands[id].reduce((sum,c)=>sum+weight(c),0)]));
+    const total=Object.values(strengths).reduce((a,b)=>a+b,0)+count*meanWeight;
+    const expected=total?count*strengths[p]/total:0;
+    const cautious=Math.max(0,expected*0.9+(Math.random()-.5)*Math.min(0.35,expected*0.2));
+    let tip=Math.floor(cautious);
+    if(Math.random()<cautious-tip)tip++;
+    if(data.hands[p].some(c=>c.color==="Rot"&&c.value===20))tip=Math.max(1,tip);
+    return Math.max(0,Math.min(count,tip));
 }
 function advanceTips(){
     if(data.status!=="tips")return;
