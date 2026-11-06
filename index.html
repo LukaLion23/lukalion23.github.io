@@ -139,7 +139,7 @@
                 </a>
             </div>
 
-            <small class="app-version">
+            <small class="app-version" id="appVersion" hidden>
                 Version 80
             </small>
 
@@ -199,6 +199,26 @@
 
     </main>
 
+    <style>
+        #appVersion { position:fixed;bottom:4px;right:7px;margin:0;font-size:9px;font-weight:400;opacity:.65;z-index:1000;pointer-events:none; }
+        #appVersion[hidden] { display:none!important; }
+    </style>
+    <script>
+        (() => {
+            const update = () => {
+                const input = document.getElementById("playerName");
+                const version = document.getElementById("appVersion");
+                if (input && version) version.hidden = input.value.trim() !== "LukasLion";
+            };
+            document.addEventListener("DOMContentLoaded", () => {
+                const input = document.getElementById("playerName");
+                if (!input) return;
+                input.addEventListener("input", update);
+                update();
+                setTimeout(update, 0);
+            });
+        })();
+    </script>
     <script type="module">
         import("./lobby.js?v=87")
             .catch(error => {
