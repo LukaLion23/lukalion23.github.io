@@ -149,7 +149,7 @@ export function renderPlayerNameHtml(name) {
         );
 
     if (String(name ?? "").trim() === "DanPan") {
-        return '<span class="danpan-player-name">' + safeName + '<span class="danpan-heart" aria-label="Herz">♥</span></span>';
+        return '<span class="danpan-player-name" style="color:#ff78bd !important;-webkit-text-fill-color:#ff78bd !important;background:none !important">' + safeName + '<span class="danpan-heart" style="color:#ff4f9b !important;-webkit-text-fill-color:#ff4f9b !important" aria-label="Herz">♥</span></span>';
     }
 
     if (isMasterPlayerName(name)) {
