@@ -2,7 +2,7 @@ import {createDeck,shuffle,objectToCards,cardsToObject,canPlayCard,determineTric
 
 const KEY="bappoSoloV2", HUMAN="human", BOT="computer", $=id=>document.getElementById(id);
 const page=location.pathname.split("/").pop();
-const url=target=>"./"+target+".html?solo=1";
+const url=target=>"./"+target+".html?solo=1&v=84";
 let data;
 let busy=false;
 const LIMIT_MS=30*60*1000, TIME_KEY="bappoSoloDailyTimeV1";
@@ -17,7 +17,7 @@ function showLimit(){
     expired=true;busy=true;
     const overlay=document.createElement("div");
     overlay.style.cssText="position:fixed;inset:0;z-index:100000;background:#082b26;color:#f5f3e9;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:25px;text-align:center;font-family:inherit";
-    overlay.innerHTML='<h2 style="font-size:clamp(23px,6vw,38px);line-height:1.3">Deine Zeit ist aufgebraucht, mach was Sinnvolles.</h2><a href="./index.html" style="padding:12px 20px;border-radius:10px;background:#d7ae59;color:#14251b;font-weight:800;text-decoration:none">Zurück zur Startseite</a>';
+    overlay.innerHTML='<h2 style="font-size:clamp(23px,6vw,38px);line-height:1.3">Dein Zeitlimit für das Spiel gegen einen Computer ist aufgebraucht. Mach was Sinnvolles.</h2><a href="./index.html" style="padding:12px 20px;border-radius:10px;background:#d7ae59;color:#14251b;font-weight:800;text-decoration:none">Zurück zur Startseite</a>';
     document.body.append(overlay);
 }
 function updateTime(){
@@ -214,8 +214,8 @@ function renderRound(){
         return;
     }
     $("roundTitle").textContent="Runde "+(data.round+1)+" vorbereiten";
-    $("cardsPerPlayer").hidden=true;
-    $("cardLimitInfo").hidden=true;
+    // Nur die beiden Aktionen behalten; alle Eingaben und Hinweise ausblenden.
+    for(const element of $("hostSetup").children)element.hidden=!element.classList.contains("round-actions");
     $("lastRoundScores").innerHTML='<table><tr><th>Spieler</th><th>Letzte Runde</th><th>Gesamt</th></tr>'+[HUMAN,BOT].map(p=>'<tr><td>'+playerName(p)+'</td><td>'+score(p).roundPoints+'</td><td>'+score(p).score+'</td></tr>').join("")+"</table>";
 }
 data=load();
