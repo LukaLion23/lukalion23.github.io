@@ -81,8 +81,10 @@ function estimate(p){
     const highCards=hand.filter(c=>c.value>=17).length;
     const strongTrumps=hand.filter(c=>c.color==="Rot"&&c.value>=15).length;
     const expected=(strength/(playerCount*average)*1.35+0.2*highCards+0.15*strongTrumps)*Math.max(0.72,1-0.07*Math.max(0,playerCount-4));
-    let tip=Math.floor(expected);
-    if(Math.random()<expected-tip)tip++;
+    const variation=(Math.random()-.5)*0.8;
+    const adjusted=Math.max(0,expected*(2/3)*(0.9+Math.random()*0.2)+variation);
+    let tip=Math.floor(adjusted);
+    if(Math.random()<adjusted-tip)tip++;
     if(hand.some(c=>c.color==="Rot"&&c.value===20))tip=Math.max(1,tip);
     return Math.max(0,Math.min(hand.length,tip));
 }
