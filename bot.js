@@ -1,132 +1,198 @@
-// Eigenständiger lokaler Bappo-Modus ohne Firebase-Zugriff.
-const COLORS = ["Rot","Blau","Grün","Gelb"];
-const byId = id => document.getElementById(id);
-const names = ["Du","Computer"];
-const image = {Rot:"rot",Blau:"blau",Grün:"gruen",Gelb:"gelb"};
-const css = {Rot:"rot",Blau:"blau",Grün:"gruen",Gelb:"gelb"};
-let round = 0, starter = 0, count = 0, turn = 0, phase = "tip";
-let hands = [[],[]], tips = [null,null], wins = [0,0], scores = [0,0], trick = [];
-let locked = false, gameId = 0;
-function random(max) {
-    const values = new Uint32Array(1), limit = 0x100000000 - (0x100000000 % max);
-    do { crypto.getRandomValues(values); } while (values[0] >= limit);
-    return values[0] % max;
+import {createDeck,shuffle,objectToCards,cardsToObject,canPlayCard,determineTrickWinner,calculateRoundPoints,getCardColorClass,getCardImagePath,escapeHtml,renderPlayerNameHtml,renderBlindHand} from "./firebase-common.js?v=80";
+
+const KEY="bappoSoloV2", HUMAN="human", BOT="computer", $=id=>document.getElementById(id);
+const page=location.pathname.split("/").pop();
+const url=target=>"./"+target+".html?solo=1";
+let data;
+let busy=false;
+function save(){sessionStorage.setItem(KEY,JSON.stringify(data));}
+function load(){try{return JSON.parse(sessionStorage.getItem(KEY));}catch{return null;}}
+function name(){return (localStorage.getItem("kartenspielPlayerName")||sessionStorage.getItem("kartenspielPlayerName")||"Du").trim().slice(0,30);}
+function newGame(){data={round:0,finished:false,scores:{[HUMAN]:{name:name(),score:0,roundPoints:0},[BOT]:{name:"Computer",score:0,roundPoints:0}}};save();}
+function navigate(target){location.replace(url(target));}
+function card(card,button=false,disabled=false){
+    const tag=button?"button":"div";
+    return '<'+tag+' class="card '+(button?'':'display-card ')+getCardColorClass(card.color)+'" '+(button?'type="button" data-card-id="'+escapeHtml(card.id)+'" '+(disabled?'disabled':''):'role="img"')+' aria-label="'+escapeHtml(card.color)+' '+card.value+'"><img class="card-color-image" src="'+getCardImagePath(card.color)+'" alt="" aria-hidden="true" draggable="false"><strong>'+card.value+'</strong></'+tag+'>';
 }
-function deck() {
-    const cards = COLORS.flatMap(color => Array.from({length:20},(_,i)=>({id:color+"_"+(i+1),color,value:i+1})));
-    for(let i=cards.length-1;i>0;i--){const j=random(i+1);[cards[i],cards[j]]=[cards[j],cards[i]];}
-    return cards;
+function score(player){return data.scores[player];}
+function playerName(player){return renderPlayerNameHtml(score(player).name);}
+function order(){return data.starter===HUMAN?[HUMAN,BOT]:[BOT,HUMAN];}
+function startRound(){
+    const deck=createDeck();shuffle(deck);
+    const count=1+Math.floor(Math.random()*10),round=data.round+1;
+    data.round=round;data.count=count;data.starter=round%2===1?HUMAN:BOT;
+    data.currentTip=data.starter;data.currentPlayer=data.starter;
+    data.hands={[HUMAN]:[],[BOT]:[]};data.trick=[];data.trickNumber=1;
+    data.wins={[HUMAN]:0,[BOT]:0};data.tips={[HUMAN]:null,[BOT]:null};
+    for(let i=0;i<count;i++)for(const p of [HUMAN,BOT])data.hands[p].push(deck.pop());
+    data.singleCards=count===1?{[HUMAN]:data.hands[HUMAN][0],[BOT]:data.hands[BOT][0]}:null;
+    data.status="tips";data.finished=false;
+    save();navigate("tip");
 }
-function cardHtml(card,disabled=false) {
-    return '<button type="button" class="card card-'+css[card.color]+'" data-card="'+card.id+'" aria-label="'+card.color+' '+card.value+'" '+(disabled?'disabled':'')+'><img class="card-color-image" src="./assets/cards/'+image[card.color]+'.png?v=80" alt=""><strong>'+card.value+'</strong></button>';
+function botTip(){
+    const cards=data.hands[BOT];
+    const strong=cards.filter(c=>c.color==="Rot"?c.value>=10:c.value>=17).length;
+    let tip=Math.max(0,Math.min(data.count,Math.round(strong*.75+(data.count-strong)*.18+(Math.random()-.5)*1.4)));
+    if(data.starter===HUMAN&&tip+data.tips[HUMAN]===data.count)tip=tip<data.count?tip+1:tip-1;
+    data.tips[BOT]=tip;data.currentTip=HUMAN;save();
 }
-function legal(hand,lead) {return !lead || !hand.some(c=>c.color===lead) ? hand : hand.filter(c=>c.color===lead);}
-function strength(card,lead){return (card.color==="Rot"?2000:card.color===lead?1000:0)+card.value;}
-function winnerOf(entries){const lead=entries[0].card.color;return entries.reduce((best,e)=>strength(e.card,lead)>strength(best.card,lead)?e:best).player;}
-function points(tip,actual){return tip===actual?10+5*actual:-5*Math.abs(tip-actual);}
-function render() {
-    byId("humanScore").textContent=scores[0]+" Punkte";
-    byId("computerScore").textContent=scores[1]+" Punkte";
-    byId("humanInfo").textContent="Tipp "+(tips[0]??"–")+" · Stiche "+wins[0];
-    byId("computerInfo").textContent="Tipp "+(tips[1]??"–")+" · Stiche "+wins[1];
-    byId("roundInfo").textContent="Runde "+round+" · "+count+" Karte"+(count===1?"":"n")+" pro Spieler";
-    byId("tipPanel").hidden=phase!=="tip";
-    byId("playPanel").hidden=phase!=="play";
-    byId("resultPanel").hidden=phase!=="result";
-    if(phase==="tip") renderTips();
-    if(phase==="play") renderPlay();
+function submitTip(){
+    if(data.status!=="tips"||data.currentTip!==HUMAN||busy)return;
+    const input=$("tipInput"),tip=Number(input.value);
+    if(!Number.isInteger(tip)||tip<0||tip>data.count){alert("Bitte gib eine ganze Zahl von 0 bis "+data.count+" ein.");return;}
+    if(data.starter===BOT&&tip+data.tips[BOT]===data.count){alert("Die Summe der Tipps darf nicht der Kartenanzahl entsprechen.");return;}
+    data.tips[HUMAN]=tip;
+    if(data.starter===HUMAN)botTip();
+    data.status="playing";data.currentPlayer=data.starter;save();navigate("game");
 }
-function renderTips() {
-    const total=tips.reduce((s,t)=>s+(t??0),0);
-    const last=turn!==starter;
-    byId("tipNote").textContent=(count===1?"Ein-Karten-Runde: Die eigene Karte bleibt verdeckt. ":"")+(last?"Computer-Tipp: "+tips[1]+". Zusammen dürfen die Tipps nicht "+count+" ergeben.":"Du beginnst mit deinem Tipp.");
-    byId("status").textContent="Du bist mit dem Tippen dran.";
-    byId("tipOptions").innerHTML=Array.from({length:count+1},(_,i)=>'<button type="button" data-tip="'+i+'" '+(last && total+i===count?'disabled':'')+'>'+i+'</button>').join("");
-    byId("tipOptions").querySelectorAll("[data-tip]").forEach(btn=>btn.onclick=()=>chooseTip(Number(btn.dataset.tip)));
-}
-function estimate(hand,visibleOpponent=[]) {
-    const cards=hand.length?hand:visibleOpponent;
-    const high=cards.filter(c=>c.color==="Rot"&&c.value>=12 || c.value>=17).length;
-    const expected=hand.length?high*0.7+Math.max(0,hand.length-high)*0.23:Math.max(0,count-visibleOpponent.filter(c=>c.color==="Rot").length)*0.27;
-    return Math.max(0,Math.min(count,Math.round(expected+(random(3)-1)*0.4)));
-}
-function chooseBotTip(last) {
-    let value=estimate(hands[1],count===1?hands[0]:[]);
-    if(last && value+tips[0]===count) value=value<count?value+1:value-1;
-    tips[1]=value;
-}
-function chooseTip(value) {
-    if(phase!=="tip" || turn!==0 || (starter===1 && value+tips[1]===count))return;
-    tips[0]=value;
-    if(starter===0)chooseBotTip(true);
-    phase="play";turn=starter;
-    byId("status").textContent="Die Tipps stehen fest.";
-    render();void botTurn();
-}
-function startRound() {
-    gameId++;locked=false;round++;count=1+random(10);starter=(round-1)%2;turn=starter;
-    const pile=deck();hands=[pile.slice(0,count),pile.slice(count,count*2)];
-    tips=[null,null];wins=[0,0];trick=[];phase="tip";
-    if(starter===1){chooseBotTip(false);turn=0;}
-    render();
-}
-function renderPlay() {
-    const lead=trick[0]?.card.color;
-    const one=count===1;
-    byId("handTitle").textContent=one?"Deine Karte (verdeckt)":"Deine Karten";
-    byId("status").textContent=turn===0?"Du bist am Zug.": "Computer ist am Zug.";
-    byId("trick").innerHTML=trick.map(e=>'<div><strong>'+names[e.player]+'</strong><div>'+cardHtml(e.card,true)+'</div></div>').join("")||"<p>Noch keine Karte gespielt.</p>";
-    if(one && hands[1].length && !trick.some(e=>e.player===1)){
-        byId("trick").innerHTML+='<div><strong>Computerkarte</strong><div>'+cardHtml(hands[1][0],true)+'</div></div>';
+function renderTips(){
+    $("roundTitle").textContent="Runde "+data.round+": Tipp abgeben";
+    $("playerDisplay").innerHTML="Du spielst als "+playerName(HUMAN)+".";
+    $("currentTipPlayer").innerHTML="Jetzt tippt: <strong>"+playerName(HUMAN)+"</strong>";
+    $("tipInput").max=String(data.count);
+    const forbidden=data.starter===BOT?data.count-data.tips[BOT]:null;
+    $("tipStatus").textContent=forbidden!==null&&forbidden>=0&&forbidden<=data.count?
+        "Du bist als Letzter dran. Du darfst nicht "+forbidden+" tippen, weil die Summe aller Tipps sonst genau "+data.count+" wäre.":
+        "Du bist dran. Erlaubt sind 0 bis "+data.count+" Stiche.";
+    $("tipOverview").innerHTML='<div class="tip-order-list">'+order().map((p,i)=>{
+        const result=data.tips[p]===null?"tippt jetzt":data.tips[p]+" Stiche";
+        return '<div class="tip-order-row '+(data.tips[p]===null?'is-current':'')+'"><span class="tip-position">'+(i+1)+'</span><span class="tip-player-name">'+playerName(p)+(p===data.starter?'<small>Rundenanfänger</small>':'')+'</span><strong class="tip-value">'+escapeHtml(result)+'</strong></div>';
+    }).join("")+"</div>";
+    const state={cardsPerPlayer:data.count,playerOrder:[HUMAN,BOT],singleCards:data.singleCards,status:"tips"};
+    const area=$("handArea"),scores={[HUMAN]:score(HUMAN),[BOT]:score(BOT)};
+    if(!renderBlindHand(area,state,{uid:HUMAN},scores,cardsToObject(data.hands[HUMAN]),null)){
+        area.closest("section").querySelector("h2").textContent="Deine Karten";
+        area.innerHTML=objectToCards(cardsToObject(data.hands[HUMAN])).map(c=>card(c)).join("");
     }
-    if(one && hands[0].length) {
-        byId("botHand").innerHTML='<button class="card blind-card" type="button" '+(turn!==0||locked?'disabled':'')+' id="blindPlay">Eigene Karte spielen</button>';
-        byId("blindPlay").onclick=()=>playCard(0,hands[0][0].id);
+}
+function chooseBotCard(){
+    const hand=data.hands[BOT],lead=data.trick[0]?.card.color;
+    const valid=hand.filter(c=>canPlayCard(hand,c,lead));
+    const strength=c=>(c.color==="Rot"?2000:c.color===lead?1000:0)+c.value;
+    const target=data.trick[0]?.card;
+    if(!target){
+        const preferred=[...valid].sort((a,b)=>strength(b)-strength(a));
+        return data.wins[BOT]<data.tips[BOT]?preferred[0]:preferred[preferred.length-1];
+    }
+    const winning=valid.filter(c=>strength(c)>strength(target)).sort((a,b)=>strength(a)-strength(b));
+    if(winning.length&&data.wins[BOT]<data.tips[BOT])return winning[0];
+    return [...valid].sort((a,b)=>strength(a)-strength(b))[0];
+}
+function renderOverview(){
+    $("playerOverview").innerHTML='<div class="player-overview-grid">'+[HUMAN,BOT].map(p=>
+        '<article class="player-stat '+(data.currentPlayer===p&&data.status==="playing"?'is-current':'')+'"><h3>'+playerName(p)+'</h3><div><span>Tipp</span><strong>'+data.tips[p]+'</strong></div><div><span>Stiche</span><strong>'+data.wins[p]+'</strong></div></article>'
+    ).join("")+"</div>";
+}
+function renderTrick(){
+    const panel=$("trickPanel");
+    panel.classList.remove("trick-color-rot","trick-color-blau","trick-color-gruen","trick-color-gelb");
+    const klass={Rot:"trick-color-rot",Blau:"trick-color-blau","Grün":"trick-color-gruen",Gelb:"trick-color-gelb"};
+    if(data.trick.length&&data.status==="playing")panel.classList.add(klass[data.trick[0].card.color]);
+    $("trickArea").innerHTML=data.trick.length?data.trick.map(e=>
+        '<div class="played-card-wrap '+(data.status==="trickResult"&&e.player===data.lastWinner?'is-trick-winner':'')+'"><span>'+playerName(e.player)+'</span>'+card(e.card)+(data.status==="trickResult"&&e.player===data.lastWinner?'<span class="winner-badge">Stichgewinner</span>':'')+'</div>'
+    ).join(""):"<p>Noch keine Karte gespielt.</p>";
+    $("trickWinner").innerHTML=data.status==="trickResult"?playerName(data.lastWinner)+" gewinnt den Stich.":"";
+}
+function playCard(id){
+    if(busy||data.status!=="playing"||data.currentPlayer!==HUMAN)return;
+    const hand=data.hands[HUMAN],picked=hand.find(c=>c.id===id);
+    if(!picked||!canPlayCard(hand,picked,data.trick[0]?.card.color))return;
+    commitCard(HUMAN,picked);
+}
+function renderHand(){
+    const area=$("handArea"),state={cardsPerPlayer:data.count,status:data.status,
+        playerOrder:[HUMAN,BOT],singleCards:data.singleCards,currentPlayerId:data.currentPlayer};
+    const scores={[HUMAN]:score(HUMAN),[BOT]:score(BOT)};
+    if(renderBlindHand(area,state,{uid:HUMAN},scores,cardsToObject(data.hands[HUMAN]),playCard)){
+        const button=area.closest("section").querySelector(".blind-own-slot button");
+        if(button&&busy)button.disabled=true;
+        $("handHint").textContent="Du siehst alle fremden Karten. Deine eigene bleibt bis zum Ausspielen verdeckt.";
         return;
     }
-    const valid=legal(hands[0],lead).map(c=>c.id);
-    byId("botHand").innerHTML=hands[0].map(c=>cardHtml(c,turn!==0||locked||!valid.includes(c.id))).join("");
-    byId("botHand").querySelectorAll("[data-card]").forEach(btn=>btn.onclick=()=>playCard(0,btn.dataset.card));
+    area.closest("section").querySelector("h2").textContent="Deine Karten";
+    $("handHint").textContent=data.status==="trickResult"?"Der Stich wird ausgewertet.":data.currentPlayer===HUMAN?"Du bist am Zug. Wähle eine Karte.":"Warte, bis du am Zug bist.";
+    const cards=objectToCards(cardsToObject(data.hands[HUMAN]));
+    area.innerHTML=cards.length?cards.map(c=>card(c,true,busy||data.status!=="playing"||data.currentPlayer!==HUMAN||!canPlayCard(cards,c,data.trick[0]?.card.color))).join(""):"<p>Du hast keine Karten mehr.</p>";
+    area.querySelectorAll("[data-card-id]").forEach(b=>b.onclick=()=>playCard(b.dataset.cardId));
 }
-function selectBotCard() {
-    const options=legal(hands[1],trick[0]?.card.color);
-    if(trick.length) {
-        const target=trick[0].card,winning=options.filter(c=>strength(c,target.color)>strength(target,target.color));
-        const wantsWin=wins[1]<tips[1];
-        const group=wantsWin&&winning.length?winning:options;
-        return [...group].sort((a,b)=>strength(a,target.color)-strength(b,target.color))[wantsWin?0:0];
+function renderGame(){
+    $("roundNumber").textContent=data.round;
+    $("currentPlayer").innerHTML=playerName(data.currentPlayer);
+    renderOverview();renderTrick();renderHand();
+}
+function commitCard(player,picked){
+    data.hands[player]=data.hands[player].filter(c=>c.id!==picked.id);
+    data.trick.push({playerId:player,player,card:picked});
+    if(data.trick.length<2){
+        data.currentPlayer=player===HUMAN?BOT:HUMAN;save();renderGame();
+        if(data.currentPlayer===BOT)runBot();
+        return;
     }
-    return [...options].sort((a,b)=>strength(b,a.color)-strength(a,a.color))[0];
-}
-async function botTurn() {
-    if(phase!=="play"||turn!==1||locked)return;
-    const id=gameId;locked=true;
-    await new Promise(resolve=>setTimeout(resolve,650));
-    if(id!==gameId||phase!=="play")return;
-    locked=false;playCard(1,selectBotCard().id);
-}
-function playCard(player,id) {
-    if(phase!=="play"||turn!==player||locked)return;
-    const hand=hands[player],card=hand.find(c=>c.id===id);
-    if(!card||!legal(hand,trick[0]?.card.color).some(c=>c.id===id))return;
-    hands[player]=hand.filter(c=>c.id!==id);trick.push({player,card});
-    if(trick.length<2){turn=1-player;render();void botTurn();return;}
-    const victor=winnerOf(trick);wins[victor]++;locked=true;render();
-    const version=gameId;
-    byId("status").textContent=names[victor]+" gewinnt den Stich.";
+    data.lastWinner=determineTrickWinner(data.trick,data.trick[0].card.color);
+    data.wins[data.lastWinner]++;data.currentPlayer=data.lastWinner;data.status="trickResult";
+    busy=true;save();renderGame();
     setTimeout(()=>{
-        if(version!==gameId)return;
-        trick=[];locked=false;
-        if(!hands[0].length&&!hands[1].length){finishRound();return;}
-        turn=victor;render();void botTurn();
-    },1100);
+        if(page!=="game.html")return;
+        data.trick=[];data.trickNumber++;
+        if(!data.hands[HUMAN].length&&!data.hands[BOT].length){finishRound();return;}
+        data.status="playing";busy=false;save();renderGame();if(data.currentPlayer===BOT)runBot();
+    },1800);
 }
-function finishRound() {
-    phase="result";
-    const deltas=tips.map((t,i)=>points(t,wins[i]));scores=scores.map((v,i)=>v+deltas[i]);
-    byId("roundResult").innerHTML=names.map((n,i)=>'<p><strong>'+n+':</strong> Tipp '+tips[i]+', '+wins[i]+' Stiche → '+(deltas[i]>=0?"+":"")+deltas[i]+' Punkte · Gesamt '+scores[i]+'</p>').join("");
-    byId("status").textContent="Runde abgeschlossen.";render();
+function runBot(){
+    if(data.status!=="playing"||data.currentPlayer!==BOT||busy)return;
+    busy=true;renderGame();
+    setTimeout(()=>{
+        if(data.status!=="playing"||data.currentPlayer!==BOT)return;
+        const picked=chooseBotCard();
+        busy=false;commitCard(BOT,picked);
+    },850);
 }
-byId("nextRound").onclick=startRound;
-byId("newGame").onclick=()=>{scores=[0,0];round=0;startRound();};
-startRound();
+function finishRound(){
+    for(const p of [HUMAN,BOT]){
+        const value=calculateRoundPoints(data.tips[p],data.wins[p]);
+        score(p).roundPoints=value;score(p).score+=value;
+    }
+    data.status="roundResult";save();
+    $("resultTip").textContent=data.tips[HUMAN];
+    $("resultTricks").textContent=data.wins[HUMAN];
+    $("resultPoints").textContent=score(HUMAN).roundPoints;
+    $("resultTotal").textContent=score(HUMAN).score;
+    $("resultOverlay").hidden=false;
+    let seconds=4;$("resultCountdown").textContent=seconds;
+    const interval=setInterval(()=>{$("resultCountdown").textContent=--seconds;if(seconds<=0){clearInterval(interval);navigate("round");}},1000);
+}
+function renderRound(){
+    const finished=data.finished;
+    $("hostSetup").hidden=finished;
+    $("playerWaiting").hidden=true;
+    $("finalResultPanel").hidden=!finished;
+    $("finalHostActions").hidden=!finished;
+    $("finalPlayerWaiting").hidden=true;
+    $("lastRoundPanel").hidden=!data.round||finished;
+    if(finished){
+        const ordered=[HUMAN,BOT].sort((a,b)=>score(b).score-score(a).score);
+        $("finalResult").innerHTML='<div class="final-podium">'+[1,0].map(i=>ordered[i]?'<div class="podium-place place-'+(i+1)+'"><span class="podium-medal">'+(i?"🥈":"🏆")+'</span><strong class="podium-name">'+playerName(ordered[i])+'</strong><span class="podium-score">'+score(ordered[i]).score+' Punkte</span><div class="podium-block">'+(i+1)+'</div></div>':"").join("")+"</div>";
+        return;
+    }
+    $("roundTitle").textContent="Runde "+(data.round+1)+" vorbereiten";
+    $("cardsPerPlayer").value="Zufällig";$("cardsPerPlayer").type="text";$("cardsPerPlayer").disabled=true;
+    $("cardLimitInfo").textContent="Die Kartenanzahl wird automatisch zufällig bestimmt.";
+    $("lastRoundScores").innerHTML='<table><tr><th>Spieler</th><th>Letzte Runde</th><th>Gesamt</th></tr>'+[HUMAN,BOT].map(p=>'<tr><td>'+playerName(p)+'</td><td>'+score(p).roundPoints+'</td><td>'+score(p).score+'</td></tr>').join("")+"</table>";
+}
+data=load();
+if(!data||!data.scores||!data.hands&&page!=="round.html") {newGame();startRound();}
+else if(page==="tip.html"){
+    if(data.status!=="tips"){navigate(data.status==="roundResult"?"round":"game");}
+    else {if(data.starter===BOT&&data.tips[BOT]===null)botTip();renderTips();$("submitTipButton").onclick=submitTip;}
+}
+else if(page==="game.html"){
+    if(!["playing","trickResult","roundResult"].includes(data.status)){navigate("tip");}
+    else {renderGame();if(data.status==="playing"&&data.currentPlayer===BOT)runBot();else if(data.status==="roundResult")navigate("round");}
+}
+else if(page==="round.html"){
+    renderRound();
+    $("startRoundButton").onclick=startRound;
+    $("finishGameButton").onclick=()=>{data.finished=true;save();renderRound();};
+    $("newGameButton").onclick=()=>{newGame();startRound();};
+    $("endRoomButton").onclick=()=>{sessionStorage.removeItem(KEY);location.replace("./index.html");};
+}
