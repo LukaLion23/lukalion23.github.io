@@ -2644,3 +2644,22 @@ body button.leave-game-button, body button#leaveRoomButton {
     -webkit-text-fill-color: #ff4f9b !important;
     font-size: .95em;
 }
+
+/* DanPan hat Vorrang vor den allgemeinen Spielerlisten-Farben. */
+body #playerList li span.danpan-player-name,
+body .room-entry span.danpan-player-name,
+body .tip-player-name span.danpan-player-name,
+body .player-stat span.danpan-player-name,
+body .played-card-wrap span.danpan-player-name,
+body .danpan-player-name {
+    color:#ff78bd !important;
+    -webkit-text-fill-color:#ff78bd !important;
+    background:none !important;
+    text-shadow:none !important;
+}
+body #playerList li span.danpan-heart,
+body .danpan-player-name .danpan-heart {
+    color:#ff4f9b !important;
+    -webkit-text-fill-color:#ff4f9b !important;
+    background:none !important;
+}
