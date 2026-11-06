@@ -90,6 +90,11 @@ function estimate(p){
         });
         leftovers.sort((a,b)=>b.fraction-a.fraction||a.random-b.random);
         for(let i=0;i<remaining;i++)predictions[leftovers[i].id]++;
+        if(ids.length>=3&&target>=ids.length&&new Set(ids.map(id=>predictions[id])).size===1){
+            const order=[...ids].sort((a,b)=>values[ids.indexOf(a)]-values[ids.indexOf(b)]);
+            predictions[order[0]]--;
+            predictions[order[order.length-1]]++;
+        }
         data.botPredictions=predictions;
     }
     return data.botPredictions[p];
