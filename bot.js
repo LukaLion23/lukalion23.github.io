@@ -180,7 +180,8 @@ function renderRound(){
     $("lastRoundScores").innerHTML='<table><tr><th>Spieler</th><th>Letzte Runde</th><th>Gesamt</th></tr>'+[HUMAN,BOT].map(p=>'<tr><td>'+playerName(p)+'</td><td>'+score(p).roundPoints+'</td><td>'+score(p).score+'</td></tr>').join("")+"</table>";
 }
 data=load();
-if(!data||!data.scores||!data.hands&&page!=="round.html") {newGame();startRound();}
+if(page==="bot.html"){newGame();startRound();}
+else if(!data||!data.scores||(!data.hands&&page!=="round.html")){newGame();startRound();}
 else if(page==="tip.html"){
     if(data.status!=="tips"){navigate(data.status==="roundResult"?"round":"game");}
     else {if(data.starter===BOT&&data.tips[BOT]===null)botTip();renderTips();$("submitTipButton").onclick=submitTip;}
