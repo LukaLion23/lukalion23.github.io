@@ -6,61 +6,9 @@
 <meta name="theme-color" content="#082b26">
 <meta name="darkreader-lock">
 <title>Bappo – Gegen den Computer</title>
-<link rel="stylesheet" href="./style.css?v=80">
-<link rel="stylesheet" href="./game-theme.css?v=80">
-<link rel="stylesheet" href="./table-layout.css?v=80">
-<style>
-html{color-scheme:only light;background:#082b26}
-.bot-container{max-width:880px;margin:auto;display:grid;gap:14px}
-.bot-header{display:flex;justify-content:space-between;align-items:center;gap:12px}
-.bot-header h1{margin:0;color:white}
-.bot-panel{background:#fff;border-radius:18px;padding:20px}
-.bot-summary{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.bot-summary>div{border-radius:12px;padding:13px;background:#edf2f6}
-.bot-summary strong{display:block;font-size:1.3rem}
-.bot-cards{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;min-height:80px}
-.bot-cards .card{width:72px;min-width:72px;min-height:102px;padding:8px;cursor:pointer}
-.bot-cards .card strong{font-size:1.55rem}
-.bot-cards .card:disabled{opacity:.48;cursor:default}
-.bot-cards .card img{max-width:100%}
-.bot-cards .blind-card{background:#283f50;color:#fff}
-.bot-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-.bot-actions button{flex:1}
-.bot-tip-options{display:flex;flex-wrap:wrap;gap:8px}
-.bot-tip-options button{flex:1;min-width:48px}
-.bot-trick{display:flex;justify-content:center;gap:20px;flex-wrap:wrap}
-.bot-trick>div{text-align:center}
-.bot-trick .card{width:75px;min-width:75px;min-height:102px}
-.bot-note{color:#405168;font-weight:600}
-.bot-status{font-weight:700}
-[hidden]{display:none!important}
-@media(max-width:600px){body{padding:12px 10px}.bot-panel{padding:14px}.bot-cards .card{width:58px;min-width:58px;min-height:86px;padding:5px}.bot-cards .card strong{font-size:1.3rem}}
-</style>
+<style>html,body{margin:0;background:#082b26;color:#fff;font-family:system-ui}</style>
 </head>
 <body>
-<main class="bot-container">
-<div class="bot-header"><h1>BAPPO <small>SOLO</small></h1><a class="secondary-button" style="padding:10px;border-radius:10px" href="./index.html">Zurück</a></div>
-<section class="bot-panel">
-<div class="bot-summary">
-<div>Du: <strong id="humanScore">0 Punkte</strong><span id="humanInfo">Tipp – · Stiche 0</span></div>
-<div>Computer: <strong id="computerScore">0 Punkte</strong><span id="computerInfo">Tipp – · Stiche 0</span></div>
-</div>
-<p id="roundInfo" class="bot-status"></p>
-<p id="status" class="bot-note" aria-live="polite"></p>
-</section>
-<section class="bot-panel" id="tipPanel" hidden>
-<h2>Wie viele Stiche machst du?</h2><p id="tipNote"></p><div class="bot-tip-options" id="tipOptions"></div>
-</section>
-<section class="bot-panel" id="playPanel" hidden>
-<h2>Aktueller Stich</h2><div id="trick" class="bot-trick"></div>
-<h2 id="handTitle">Deine Karten</h2>
-<div id="botHand" class="bot-cards"></div>
-</section>
-<section class="bot-panel" id="resultPanel" hidden>
-<h2>Rundenergebnis</h2><div id="roundResult"></div>
-<div class="bot-actions"><button id="nextRound" type="button">Nächste Runde</button><button id="newGame" type="button" class="secondary-button">Neues Spiel</button></div>
-</section>
-</main>
-<script type="module" src="./bot.js"></script>
+<script type="module" src="./bot.js?v=81"></script>
 </body>
 </html>
