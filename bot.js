@@ -58,7 +58,7 @@ function startRound(){
     const count=Math.floor(Math.random()*(Math.min(20,Math.floor(80/players().length))+1));
     data.round++;data.count=count;data.starter=players()[(data.round-1)%players().length];
     data.order=rotate(players(),data.starter);data.currentTip=data.starter;data.currentPlayer=data.starter;
-    data.hands={};data.tips={};data.wins={};data.trick=[];data.trickNumber=1;data.lastWinner=null;
+    data.hands={};data.tips={};data.wins={};data.botPredictions=null;data.trick=[];data.trickNumber=1;data.lastWinner=null;
     for(const p of players()){data.hands[p]=[];data.tips[p]=null;data.wins[p]=0;}
     for(let i=0;i<count;i++)for(const p of players())data.hands[p].push(pile.pop());
     data.singleCards=count===1?Object.fromEntries(players().map(p=>[p,data.hands[p][0]])):null;
@@ -71,20 +71,28 @@ function startRound(){
 }
 function forbiddenTip(){if(data.currentTip!==data.order[data.order.length-1])return null;return data.count-data.order.slice(0,-1).reduce((sum,p)=>sum+(data.tips[p]||0),0);}
 function estimate(p){
-    const playersNow=players(),count=data.count;
-    const weight=c=>{
-        const high=Math.pow(c.value/20,3);
-        return c.color==="Rot"?1.1+2.5*high:0.45+1.65*high;
-    };
-    const meanWeight=(20*(1.1+3*0.45)+(2.5+3*1.65)*Array.from({length:20},(_,i)=>Math.pow((i+1)/20,3)).reduce((a,b)=>a+b,0))/80;
-    const strengths=Object.fromEntries(bots().map(id=>[id,data.hands[id].reduce((sum,c)=>sum+weight(c),0)]));
-    const total=Object.values(strengths).reduce((a,b)=>a+b,0)+count*meanWeight;
-    const expected=total?count*strengths[p]/total:0;
-    const cautious=Math.max(0,expected*0.9+(Math.random()-.5)*Math.min(0.35,expected*0.2));
-    let tip=Math.floor(cautious);
-    if(Math.random()<cautious-tip)tip++;
-    if(data.hands[p].some(c=>c.color==="Rot"&&c.value===20))tip=Math.max(1,tip);
-    return Math.max(0,Math.min(count,tip));
+    if(!data.botPredictions){
+        const weight=c=>c.color==="Rot"?1.1+2.5*Math.pow(c.value/20,3):0.45+1.65*Math.pow(c.value/20,3);
+        const strength=id=>data.hands[id].reduce((sum,c)=>sum+weight(c),0);
+        const ids=bots(),humanStrength=strength(HUMAN);
+        const values=ids.map(id=>strength(id)*(0.9+Math.random()*0.2));
+        const total=humanStrength+values.reduce((sum,v)=>sum+v,0);
+        const expected=total?data.count*values.reduce((sum,v)=>sum+v,0)/total:0;
+        const target=Math.max(0,Math.min(data.count,Math.round(expected*0.95)));
+        const predictions=Object.fromEntries(ids.map(id=>[id,0]));
+        const raw=values.map(v=>total?target*v/values.reduce((sum,x)=>sum+x,0):0);
+        let remaining=target;
+        const leftovers=raw.map((value,i)=>{
+            const base=Math.floor(value);
+            predictions[ids[i]]=base;
+            remaining-=base;
+            return {id:ids[i],fraction:value-base,random:Math.random()};
+        });
+        leftovers.sort((a,b)=>b.fraction-a.fraction||a.random-b.random);
+        for(let i=0;i<remaining;i++)predictions[leftovers[i].id]++;
+        data.botPredictions=predictions;
+    }
+    return data.botPredictions[p];
 }
 function advanceTips(){
     if(data.status!=="tips")return;
