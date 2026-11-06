@@ -44,9 +44,7 @@
     <style>
         body.solo-mode #hostSetup > :not(.round-actions) { display:none !important; }
         body.solo-mode #hostSetup .round-actions { display:flex; justify-content:center; }
-        body.solo-mode #hostSetup #finishGameButton { display:none !important; }
-        body.solo-mode #hostSetup #startRoundButton { width:min(100%,420px); }
-        body.solo-mode #lastRoundPanel { display:none !important; }
+        body.solo-mode #hostSetup #startRoundButton { width:auto; }
     </style>
 
 </head>
@@ -191,7 +189,7 @@
     </main>
 
     <script type="module">
-        import(new URLSearchParams(location.search).has("solo") ? "./bot.js?v=83" : "./round.js?v=80")
+        import(new URLSearchParams(location.search).has("solo") ? "./bot.js?v=84" : "./round.js?v=80")
             .catch(error => {
                 console.error(error);
 
