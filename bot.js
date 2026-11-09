@@ -2,7 +2,7 @@ import {createDeck,shuffle,cardsToObject,objectToCards,canPlayCard,determineTric
 
 const KEY="bappoSoloV3", TIME_KEY="bappoSoloDailyTimeV1", LIMIT=1800000, HUMAN="human";
 const $=id=>document.getElementById(id), page=location.pathname.split("/").pop();
-const url=p=>"./"+p+".html?solo=1&v=89";
+const url=p=>"./"+p+".html?solo=1&v=100";
 let data, busy=false, expired=false, lastTick=Date.now(), actionTimer=null;
 function name(){return (getSavedPlayerName()||"Du").slice(0,30);}
 function maxBots(){return name()==="LukasLion"?10:4;}
