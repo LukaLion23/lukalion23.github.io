@@ -55,7 +55,10 @@ function rotate(array,id){const i=array.indexOf(id);return [...array.slice(i),..
 function startRound(){
     if(!timeCheck())return;
     const pile=createDeck();shuffle(pile);
-    const count=Math.floor(Math.random()*(Math.min(20,Math.floor(80/players().length))+1));
+    const max=Math.min(20,Math.floor(80/players().length));
+    const input=$("soloCardCount");
+    const count=input&&input.value!==""?Number(input.value):Math.floor(Math.random()*(max+1));
+    if(!Number.isInteger(count)||count<0||count>max){alert("Bitte wähle eine Kartenanzahl zwischen 0 und "+max+".");return;}
     data.round++;data.count=count;data.starter=players()[(data.round-1)%players().length];
     data.order=rotate(players(),data.starter);data.currentTip=data.starter;data.currentPlayer=data.starter;
     data.hands={};data.tips={};data.wins={};data.botPredictions=null;data.trick=[];data.trickNumber=1;data.lastWinner=null;
@@ -264,7 +267,19 @@ function renderRound(){
         $("finalResult").innerHTML='<div class="final-podium">'+[1,0,2].map(i=>ordered[i]?'<div class="podium-place place-'+(i+1)+'"><span class="podium-medal">'+["🏆","🥈","🥉"][i]+'</span><strong class="podium-name">'+playerName(ordered[i])+'</strong><span class="podium-score">'+score(ordered[i]).score+' Punkte</span><div class="podium-block">'+(i+1)+"</div></div>":"").join("")+"</div>";
         return;
     }
-    for(const e of $("hostSetup").children)e.hidden=!e.classList.contains("round-actions");
+    for(const e of $("hostSetup").children)e.hidden=!e.classList.contains("round-actions")&&!e.classList.contains("solo-card-selection");
+    let selection=$("soloCardSelection");
+    if(!selection){
+        selection=document.createElement("div");selection.id="soloCardSelection";selection.className="solo-card-selection";
+        selection.style.cssText="display:flex;flex-direction:column;align-items:center;gap:10px;margin:18px auto;";
+        selection.innerHTML='<label for="soloCardCount">Karten pro Spieler (0–20)</label><input id="soloCardCount" type="number" min="0" max="20" step="1" value="5" inputmode="numeric" style="width:110px;text-align:center;font-size:18px"><button id="soloRandomCards" type="button" class="secondary-button">Zufällig</button><p id="soloCardInfo" style="margin:0;font-size:13px"></p>';
+        $("hostSetup").insertBefore(selection,$("hostSetup").querySelector(".round-actions"));
+        const input=$("soloCardCount"),max=Math.min(20,Math.floor(80/players().length));
+        input.max=String(max);input.value=String(Math.min(5,max));
+        const update=()=>{$("soloCardInfo").textContent="Möglich: 0 bis "+max+" Karten pro Spieler.";};
+        $("soloRandomCards").onclick=()=>{input.value=String(Math.floor(Math.random()*(max+1)));update();};
+        update();
+    }
     $("lastRoundScores").innerHTML='<table><tr><th>Spieler</th><th>Letzte Runde</th><th>Gesamt</th></tr>'+players().map(p=>'<tr><td>'+playerName(p)+'</td><td>'+score(p).roundPoints+'</td><td>'+score(p).score+'</td></tr>').join("")+"</table>";
 }
 data=load();
