@@ -45,6 +45,11 @@
         body.solo-mode #hostSetup > :not(.round-actions):not(.solo-card-selection) { display:none !important; }
         body.solo-mode #hostSetup .round-actions { display:flex; justify-content:center; }
         body.solo-mode #hostSetup #startRoundButton { width:auto; }
+        body:not(.solo-mode) #soloCardSelection { display:none !important; }
+        body.solo-mode #soloCardSelection { display:flex !important; flex-direction:column; align-items:center; gap:12px; margin:18px auto; }
+        body.solo-mode #soloCardCount { display:block; width:110px; min-height:48px; text-align:center; font-size:18px; background:white; color:#173328; }
+        body.solo-mode #soloRandomCards { display:block; width:auto; min-width:150px; }
+        body.solo-mode #soloCardInfo { margin:0; font-size:13px; }
     </style>
 
 </head>
@@ -94,6 +99,13 @@
                 value="5">
 
             <p id="cardLimitInfo"></p>
+
+            <div class="solo-card-selection" id="soloCardSelection">
+                <label for="soloCardCount">Karten pro Spieler</label>
+                <input id="soloCardCount" type="number" inputmode="numeric" min="0" max="20" step="1" value="5">
+                <button id="soloRandomCards" type="button" class="secondary-button">Zufällig</button>
+                <p id="soloCardInfo"></p>
+            </div>
 
             <div class="round-actions">
 
@@ -189,7 +201,7 @@
     </main>
 
     <script type="module">
-        import(new URLSearchParams(location.search).has("solo") ? "./bot.js?v=97" : "./round.js?v=87")
+        import(new URLSearchParams(location.search).has("solo") ? "./bot.js?v=99" : "./round.js?v=87")
             .catch(error => {
                 console.error(error);
 
