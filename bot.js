@@ -2,7 +2,7 @@ import {createDeck,shuffle,cardsToObject,objectToCards,canPlayCard,determineTric
 
 const KEY="bappoSoloV3", TIME_KEY="bappoSoloDailyTimeV1", LIMIT=1800000, HUMAN="human";
 const $=id=>document.getElementById(id), page=location.pathname.split("/").pop();
-const url=p=>"./"+p+".html?solo=1&v=100";
+const url=p=>"./"+(p==="round"?"solo-round":p)+".html?solo=1&v=105";
 let data, busy=false, expired=false, lastTick=Date.now(), actionTimer=null;
 function name(){return (getSavedPlayerName()||"Du").slice(0,30);}
 function maxBots(){return name()==="LukasLion"?10:4;}
@@ -284,7 +284,7 @@ if(page==="bot.html"){
 else if(!data||!Array.isArray(data.players)||data.players.length<2||bots().length>maxBots())go("bot");
 else{
     if(data.scores[HUMAN]){data.scores[HUMAN].name=name();save();}
-    if(page==="round.html"){
+    if(page==="round.html"||page==="solo-round.html"){
         renderRound();
         $("startRoundButton").onclick=startRound;
         $("finishGameButton").onclick=()=>{data.finished=true;save();renderRound();};
