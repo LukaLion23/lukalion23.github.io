@@ -43,12 +43,12 @@
     <link rel="stylesheet" href="./table-layout.css?v=80">
     <style>
         body.solo-mode #hostSetup > :not(.round-actions):not(.solo-card-selection) { display:none !important; }
-        body.solo-mode #hostSetup .round-actions { display:flex; justify-content:center; }
+        body.solo-mode #hostSetup .round-actions { display:flex; flex-wrap:wrap; justify-content:center; }
         body.solo-mode #hostSetup #startRoundButton { width:auto; }
         body:not(.solo-mode) #soloCardSelection { display:none !important; }
-        body.solo-mode #soloCardSelection { display:flex !important; flex-direction:column; align-items:center; gap:12px; margin:18px auto; }
+        body.solo-mode #soloCardSelection { display:flex !important; flex-direction:column; align-items:center; gap:12px; margin:18px auto; width:100%; flex:0 0 100%; order:-1; }
         body.solo-mode #soloCardCount { display:block; width:110px; min-height:48px; text-align:center; font-size:18px; background:white; color:#173328; }
-        body.solo-mode #soloRandomCards { display:block; width:auto; min-width:150px; }
+        body.solo-mode #soloRandomCards { display:block; width:auto; min-width:150px; flex:none; }
         body.solo-mode #soloCardInfo { margin:0; font-size:13px; }
     </style>
 
@@ -100,6 +100,7 @@
 
             <p id="cardLimitInfo"></p>
 
+            <div class="round-actions">
             <div class="solo-card-selection" id="soloCardSelection">
                 <label for="soloCardCount">Karten pro Spieler</label>
                 <input id="soloCardCount" type="number" inputmode="numeric" min="0" max="20" step="1" value="5">
@@ -107,7 +108,6 @@
                 <p id="soloCardInfo"></p>
             </div>
 
-            <div class="round-actions">
 
                 <button
                     id="startRoundButton"
@@ -201,7 +201,7 @@
     </main>
 
     <script type="module">
-        import("./bot.js?v=105")
+        import("./bot.js?v=108")
             .catch(error => {
                 console.error(error);
 
